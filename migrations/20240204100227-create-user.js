@@ -30,6 +30,15 @@ module.exports = {
       role: {
         type: Sequelize.STRING
       },
+      privateReferralCodeId: {
+        type: Sequelize.INTEGER
+      },
+      reedemedReferralCodeId: {
+        type: Sequelize.INTEGER
+      },
+      profilePicture: {
+        type: Sequelize.STRING
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE
