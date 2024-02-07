@@ -13,11 +13,17 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
     }
   }
+<<<<<<< HEAD
   User.init({
     password: DataTypes.STRING,
     username: DataTypes.STRING,
     privateReferralCodeId: DataTypes.INTEGER,
     reedemedReferralCodeId: DataTypes.INTEGER
+=======
+  Admin.init({
+    password: DataTypes.STRING,
+    username: DataTypes.STRING
+>>>>>>> b4bee17fda160ed38765b554b591fa083495cc5c
   }, {
     sequelize,
     modelName: 'Admin',

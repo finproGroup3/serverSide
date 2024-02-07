@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // routes/admin.js
 
 const express = require('express');
@@ -55,5 +56,14 @@ router.get('/users', async (req, res) => {
         res.status(500).json({ message: 'Internal server error' });
     }
 });
+=======
+const express = require("express");
+const router = express.Router();
+const UserController = require("../controller/user_controller"); // Perbaikan disini
+
+router.get("/", UserController.getAll);
+router.post("/register", UserController.register);
+router.post("/login", UserController.login);
+>>>>>>> b4bee17fda160ed38765b554b591fa083495cc5c
 
 module.exports = router;

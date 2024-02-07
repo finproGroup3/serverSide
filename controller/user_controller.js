@@ -1,5 +1,6 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+<<<<<<< HEAD
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -32,6 +33,9 @@ const upload = multer({
         fileSize: 5 * 1024 * 1024, // 5MB file size limit
     },
 });
+=======
+const { User } = require("../models");
+>>>>>>> b4bee17fda160ed38765b554b591fa083495cc5c
 
 class UserController {
     static async getAll(req, res, next) {
@@ -39,12 +43,17 @@ class UserController {
             const users = await User.findAll();
             res.status(200).json(users);
         } catch (error) {
+<<<<<<< HEAD
             next(error);
+=======
+            next(error); 
+>>>>>>> b4bee17fda160ed38765b554b591fa083495cc5c
         }
     }
 
     static async register(req, res, next) {
         try {
+<<<<<<< HEAD
             // Use multer middleware to handle form-data
             upload.single('profilePicture')(req, res, async function (err) {
                 if (err instanceof multer.MulterError) {
@@ -82,6 +91,26 @@ class UserController {
 
                 res.status(201).json(newUser);
             });
+=======
+            // Destructure data dari body request
+            const { email, password, username, cityId, provinceId, address, role } = req.body;
+
+            // Hash password menggunakan bcrypt
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            // Buat user baru
+            const newUser = await User.create({
+                email,
+                password: hashedPassword,
+                username,
+                cityId,
+                provinceId,
+                address,
+                role
+            });
+
+            res.status(201).json(newUser);
+>>>>>>> b4bee17fda160ed38765b554b591fa083495cc5c
         } catch (error) {
             next(error);
         }
@@ -89,6 +118,7 @@ class UserController {
 
     static async login(req, res, next) {
         try {
+<<<<<<< HEAD
             // Destructure email and password from body request
             const { email, password } = req.body;
 
@@ -113,6 +143,32 @@ class UserController {
                 { userId: user.id, email: user.email },
                 'your-secret-key', // Replace with a secure secret key
                 { expiresIn: '1h' } // Set token expiration time
+=======
+            // Destructure email dan password dari body request
+            const { email, password } = req.body;
+
+            // Cari user berdasarkan email
+            const user = await User.findOne({ where: { email } });
+
+            // Jika user tidak ditemukan, kirim respon error
+            if (!user) {
+                return res.status(401).json({ message: 'Email atau password salah' });
+            }
+
+            // Bandingkan password yang dimasukkan dengan password yang tersimpan di database
+            const isPasswordValid = await bcrypt.compare(password, user.password);
+
+            // Jika password tidak valid, kirim respon error
+            if (!isPasswordValid) {
+                return res.status(401).json({ message: 'Email atau password salah' });
+            }
+
+            // Buat token JWT
+            const token = jwt.sign(
+                { userId: user.id, email: user.email },
+                'your-secret-key', // Ganti dengan secret key yang aman
+                { expiresIn: '1h' } // Atur waktu kedaluwarsa token
+>>>>>>> b4bee17fda160ed38765b554b591fa083495cc5c
             );
 
             res.status(200).json({ token });

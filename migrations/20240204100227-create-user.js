@@ -30,6 +30,7 @@ module.exports = {
       role: {
         type: Sequelize.STRING
       },
+<<<<<<< HEAD
       privateReferralCodeId: {
         type: Sequelize.INTEGER
       },
@@ -39,6 +40,8 @@ module.exports = {
       profilePicture: {
         type: Sequelize.STRING
       },
+=======
+>>>>>>> b4bee17fda160ed38765b554b591fa083495cc5c
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE
