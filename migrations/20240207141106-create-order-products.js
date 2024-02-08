@@ -2,54 +2,36 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Users', {
+    await queryInterface.createTable('OrderProducts', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      email: {
-        type: Sequelize.STRING
-      },
-      password: {
-        type: Sequelize.STRING
-      },
-      username: {
-        type: Sequelize.STRING
-      },
-      cityId: {
+      price: {
         type: Sequelize.INTEGER
       },
-      provinceId: {
-        type: Sequelize.INTEGER
-      },
-      address: {
-        type: Sequelize.STRING
-      },
-      role: {
-        type: Sequelize.STRING
-      },
-      privateReferralCodeId: {
+      productId: {
         type: Sequelize.INTEGER,
         references: {
-          model: 'ReferralCodes',
+          model: 'Products',
           key: 'id',
         },
         onUpdate: "CASCADE",
         onDelete: "CASCADE"
       },
-      reedemedReferralCodeId: {
+      quantity: {
+        type: Sequelize.INTEGER
+      },
+      orderId: {
         type: Sequelize.INTEGER,
         references: {
-          model: 'ReferralCodes',
+          model: 'Orders',
           key: 'id',
         },
         onUpdate: "CASCADE",
         onDelete: "CASCADE"
-      },
-      profilePicture: {
-        type: Sequelize.STRING
       },
       createdAt: {
         allowNull: false,
@@ -62,6 +44,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Users');
+    await queryInterface.dropTable('OrderProducts');
   }
 };

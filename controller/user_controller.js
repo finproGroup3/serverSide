@@ -42,7 +42,25 @@ class UserController {
             next(error);
         }
     }
+    static async getById(req, res, next) {
+        try {
+            // Extract the user ID from the request parameters
+            const userId = req.params.id;
 
+            // Find the user by ID in the database
+            const user = await User.findByPk(userId);
+
+            // If user is not found, send a 404 response
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            // If user is found, send the user data
+            res.status(200).json(user);
+        } catch (error) {
+            next(error); // Pass any errors to the error handling middleware
+        }
+    }
     static async register(req, res, next) {
         try {
             // Use multer middleware to handle form-data
@@ -97,7 +115,7 @@ class UserController {
 
             // If user not found, send error response
             if (!user) {
-                return res.status(401).json({ message: 'Email or password is incorrect' });
+                return res.status(401).json({ message: 'cannot found user' });
             }
 
             // Compare entered password with the stored password in the database
@@ -105,7 +123,7 @@ class UserController {
 
             // If password is not valid, send error response
             if (!isPasswordValid) {
-                return res.status(401).json({ message: 'Email or password is incorrect' });
+                return res.status(401).json({ message: 'password is incorrect' });
             }
 
             // Create JWT token
