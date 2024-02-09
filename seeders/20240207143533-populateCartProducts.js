@@ -16,11 +16,13 @@ module.exports = {
       {
         cartId: 1,
         quantity: 100,
+        price: 2000,
         productId: 2,
       },
       {
         cartId: 2,
         quantity: 100,
+        price: 2000,
         productId: 1,
       },
     ]);

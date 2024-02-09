@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { User } = require('../models');
+const { User, ReferralCode } = require('../models');
 
 // Set up multer storage
 const storage = multer.diskStorage({
@@ -32,6 +32,16 @@ const upload = multer({
         fileSize: 5 * 1024 * 1024, // 5MB file size limit
     },
 });
+
+const generateRandomCode = () => {
+    // Function to generate a random alphanumeric code
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+        code += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return code;
+};
 
 class UserController {
     static async getAll(req, res, next) {
@@ -72,7 +82,7 @@ class UserController {
                 }
 
                 // Destructure data from body request
-                const { email, password, username, cityId, provinceId, address, role, reedemedReferralCodeId } = req.body;
+                const { email, password, username, cityId, provinceId, address, role, referralCode } = req.body;
 
                 // Check if user with the same email already exists
                 const existingUser = await User.findOne({ where: { email } });
@@ -80,11 +90,39 @@ class UserController {
                     return res.status(400).json({ message: 'User with this email already exists' });
                 }
 
-                // Access the uploaded file, if any
+                // Check if a referral code was provided
+                if (referralCode) {
+                    // Find the referral code in the database
+                    const existingReferralCode = await ReferralCode.findOne({ where: { code: referralCode } });
+                    if (!existingReferralCode) {
+                        // If referral code doesn't exist, return an error response
+                        return res.status(400).json({ message: 'Invalid referral code' });
+                    }
+                }
+
+                // Generate a unique referral code
+                let generatedCode;
+                let isCodeUnique = false;
+                while (!isCodeUnique) {
+                    generatedCode = generateRandomCode(); // You need to implement this function
+                    const existingReferralCode = await ReferralCode.findOne({ where: { code: generatedCode } });
+                    if (!existingReferralCode) {
+                        isCodeUnique = true;
+                    }
+                }
+
+                // Create a new referral code
+                const newReferralCode = await ReferralCode.create({
+                    code: generatedCode,
+                    percentage: 50,
+                    isActive: true
+                });
+
+                // After handling file upload with multer
                 const profilePicture = req.file ? req.file.filename : null;
-                console.log('Profile Picture Filename:', profilePicture);
                 // Hash password using bcrypt
                 const hashedPassword = await bcrypt.hash(password, 10);
+
                 // Create a new user
                 const newUser = await User.create({
                     email,
@@ -94,9 +132,19 @@ class UserController {
                     provinceId,
                     address,
                     role,
-                    reedemedReferralCodeId,
+                    privateReferralCodeId: newReferralCode.id, // Associate the user with the newly created referral code
                     profilePicture,
                 });
+
+                // Check if user input a referral code
+                if (referralCode) {
+                    // Find the referral code in the database
+                    const redeemedReferralCode = await ReferralCode.findOne({ where: { code: referralCode } });
+                    if (redeemedReferralCode) {
+                        // Associate the redeemed referral code with the user
+                        await newUser.update({ reedemedReferralCodeId: redeemedReferralCode.id });
+                    }
+                }
 
                 res.status(201).json(newUser);
             });
@@ -104,6 +152,8 @@ class UserController {
             next(error);
         }
     }
+
+
 
     static async login(req, res, next) {
         try {
