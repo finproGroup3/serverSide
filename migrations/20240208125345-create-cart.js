@@ -11,7 +11,7 @@ module.exports = {
       },
       userId: {
         type: Sequelize.INTEGER,
-         references:{
+        references: {
           model: "Users",
           key: "id"
         },
@@ -20,7 +20,7 @@ module.exports = {
       },
       promoId: {
         type: Sequelize.INTEGER,
-         references:{
+        references: {
           model: "Promos",
           key: "id"
         },
@@ -28,19 +28,24 @@ module.exports = {
         onDelete: "CASCADE"
       },
       shippingCost: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
+        defaultValue: 0
       },
       totalDiscount: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
+        defaultValue: 0
       },
       totalAffiliate: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
+        defaultValue: 0
       },
       totalPrice: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
+        defaultValue: 0
       },
       nettPrice: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
+        defaultValue: 0
       },
       shippingMethod: {
         type: Sequelize.STRING

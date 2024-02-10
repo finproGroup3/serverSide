@@ -3,16 +3,16 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { User, ReferralCode } = require('../models');
+const { User, ReferralCode, Cart } = require('../models');
 
 // Set up multer storage
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, path.join(__dirname, '..', 'uploads'));
+        cb(null, path.join(__dirname, '..', 'uploads/profile'));
     },
     filename: function (req, file, cb) {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        const filename = file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname);
+        const filename = uniqueSuffix + path.extname(file.originalname);
         cb(null, filename);
     },
 });
@@ -47,11 +47,12 @@ class UserController {
     static async getAll(req, res, next) {
         try {
             const users = await User.findAll();
-            res.status(200).json(users);
+            res.status(200).json({ status: 'success', code: 200, data: users, message: 'Users retrieved successfully' });
         } catch (error) {
             next(error);
         }
     }
+
     static async getById(req, res, next) {
         try {
             // Extract the user ID from the request parameters
@@ -62,23 +63,24 @@ class UserController {
 
             // If user is not found, send a 404 response
             if (!user) {
-                return res.status(404).json({ message: 'User not found' });
+                return res.status(404).json({ status: 'failed', code: 404, message: 'User not found' });
             }
 
             // If user is found, send the user data
-            res.status(200).json(user);
+            res.status(200).json({ status: 'success', code: 200, data: user, message: 'User retrieved successfully' });
         } catch (error) {
             next(error); // Pass any errors to the error handling middleware
         }
     }
+
     static async register(req, res, next) {
         try {
             // Use multer middleware to handle form-data
             upload.single('profilePicture')(req, res, async function (err) {
                 if (err instanceof multer.MulterError) {
-                    return res.status(400).json({ message: 'Error uploading file' });
+                    return res.status(400).json({ status: 'failed', code: 400, message: 'Error uploading file' });
                 } else if (err) {
-                    return res.status(500).json({ message: 'Internal server error' });
+                    return res.status(500).json({ status: 'failed', code: 500, message: 'Internal server error' });
                 }
 
                 // Destructure data from body request
@@ -87,7 +89,7 @@ class UserController {
                 // Check if user with the same email already exists
                 const existingUser = await User.findOne({ where: { email } });
                 if (existingUser) {
-                    return res.status(400).json({ message: 'User with this email already exists' });
+                    return res.status(400).json({ status: 'failed', code: 400, message: 'User with this email already exists' });
                 }
 
                 // Check if a referral code was provided
@@ -96,7 +98,7 @@ class UserController {
                     const existingReferralCode = await ReferralCode.findOne({ where: { code: referralCode } });
                     if (!existingReferralCode) {
                         // If referral code doesn't exist, return an error response
-                        return res.status(400).json({ message: 'Invalid referral code' });
+                        return res.status(400).json({ status: 'failed', code: 400, message: 'Invalid referral code' });
                     }
                 }
 
@@ -136,6 +138,9 @@ class UserController {
                     profilePicture,
                 });
 
+                // Create a cart for the new user
+                const newCart = await Cart.create({ userId: newUser.id });
+
                 // Check if user input a referral code
                 if (referralCode) {
                     // Find the referral code in the database
@@ -145,15 +150,12 @@ class UserController {
                         await newUser.update({ reedemedReferralCodeId: redeemedReferralCode.id });
                     }
                 }
-
-                res.status(201).json(newUser);
+                res.status(201).json({ status: 'success', code: 201, data: newUser, message: 'User registered successfully' });
             });
         } catch (error) {
             next(error);
         }
     }
-
-
 
     static async login(req, res, next) {
         try {
@@ -165,7 +167,7 @@ class UserController {
 
             // If user not found, send error response
             if (!user) {
-                return res.status(401).json({ message: 'cannot found user' });
+                return res.status(401).json({ status: 'failed', code: 401, message: 'User not found' });
             }
 
             // Compare entered password with the stored password in the database
@@ -173,7 +175,7 @@ class UserController {
 
             // If password is not valid, send error response
             if (!isPasswordValid) {
-                return res.status(401).json({ message: 'password is incorrect' });
+                return res.status(401).json({ status: 'failed', code: 401, message: 'Password is incorrect' });
             }
 
             // Create JWT token
@@ -183,11 +185,14 @@ class UserController {
                 { expiresIn: '1h' } // Set token expiration time
             );
 
-            res.status(200).json({ token });
+            // Return response with user data and token
+            res.status(200).json({ status: 'success', code: 200, data: user, token, message: 'User logged in successfully' });
         } catch (error) {
             next(error);
         }
     }
+
+
 }
 
 module.exports = UserController;

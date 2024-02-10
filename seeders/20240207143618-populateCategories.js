@@ -14,12 +14,12 @@ module.exports = {
     */
     await queryInterface.bulkInsert("Categories", [
       {
-        name: "admin1",
+        name: "electronic",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
       {
-        name: "admin2",
+        name: "pakaian",
         createdAt: new Date(),
         updatedAt: new Date(),
       },
