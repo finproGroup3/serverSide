@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const UserController = require("../controller/user_controller"); // Perbaikan disini
+const UserController = require("../controller/admin_controller"); // Perbaikan disini
 
 router.get("/", UserController.getAll);
 router.post("/register", UserController.register);
