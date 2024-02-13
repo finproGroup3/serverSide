@@ -12,8 +12,11 @@ module.exports = {
       code: {
         type: Sequelize.STRING,
       },
-      precentage: {
+      percentage: {
         type: Sequelize.INTEGER,
+      },
+      description: {
+        type: Sequelize.STRING,
       },
       quota: {
         type: Sequelize.INTEGER,

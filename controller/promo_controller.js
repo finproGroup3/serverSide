@@ -1,9 +1,21 @@
-const { Promo, PromoProduct } = require('../models');
+const { Promo, PromoProduct, Product } = require('../models');
 
 class PromoController {
     static async getAll(req, res, next) {
         try {
-            const promos = await Promo.findAll();
+            const promos = await Promo.findAll({
+                include: [{
+                    model: Product,
+                    attributes: ['id', 'sku', 'name', 'price', 'weight', 'stock', 'categoryId', 'createdAt', 'updatedAt'],
+                    through: { attributes: [] } // Exclude association data
+                }]
+            });
+            // Remove PromoProduct from the nested Product objects
+            promos.forEach(promo => {
+                promo.Products.forEach(product => {
+                    delete product.PromoProduct;
+                });
+            });
             res.status(200).json({ status: 'success', code: 200, data: promos, message: 'Promos retrieved successfully' });
         } catch (error) {
             next(error);
@@ -13,7 +25,19 @@ class PromoController {
     static async getById(req, res, next) {
         try {
             const promoId = req.params.id;
-            const promo = await Promo.findByPk(promoId);
+            const promo = await Promo.findByPk(promoId, {
+                include: [{
+                    model: Product,
+                    attributes: ['id', 'sku', 'name', 'price', 'weight', 'stock', 'categoryId', 'createdAt', 'updatedAt'],
+                    through: { attributes: [] } // Exclude association data
+                }]
+            });
+            // Remove PromoProduct from the nested Product objects
+            if (promo) {
+                promo.Products.forEach(product => {
+                    delete product.PromoProduct;
+                });
+            }
             if (!promo) {
                 return res.status(404).json({ status: 'failed', code: 404, message: 'Promo not found' });
             }
