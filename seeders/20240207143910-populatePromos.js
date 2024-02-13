@@ -15,7 +15,7 @@ module.exports = {
     await queryInterface.bulkInsert("Promos", [
       {
         code: "REGE1039",
-        precentage: 11,
+        percentage: 11,
         quota: 1000,
         isActive: true,
         isGlobal: true,
@@ -24,7 +24,7 @@ module.exports = {
       },
       {
         code: "TER3928",
-        precentage: 11,
+        percentage: 11,
         quota: 1000,
         isActive: true,
         isGlobal: false,

@@ -15,14 +15,14 @@ module.exports = {
     await queryInterface.bulkInsert("ReferralCodes", [
       {
         code: "BARU123",
-        precentage: 10,
+        percentage: 10,
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
       },
       {
         code: "CODE2021",
-        precentage: 50,
+        percentage: 50,
         isActive: true,
         createdAt: new Date(),
         updatedAt: new Date(),
