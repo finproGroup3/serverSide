@@ -28,19 +28,24 @@ module.exports = {
         onDelete: "CASCADE"
       },
       shippingCost: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
+        defaultValue: 0 // Default value set to 0
       },
       totalDiscount: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
+        defaultValue: 0 // Default value set to 0
       },
       totalAffiliate: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
+        defaultValue: 0 // Default value set to 0
       },
       totalPrice: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
+        defaultValue: 0 // Default value set to 0
       },
       nettPrice: {
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
+        defaultValue: 0 // Default value set to 0
       },
       shippingMethod: {
         type: Sequelize.STRING
