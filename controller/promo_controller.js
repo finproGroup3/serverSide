@@ -1,4 +1,4 @@
-const { Promo, PromoProduct, Product } = require('../models');
+const { Promo, PromoProduct, Product, ProductGallery } = require('../models');
 
 class PromoController {
     static async getAll(req, res, next) {
@@ -7,7 +7,11 @@ class PromoController {
                 include: [{
                     model: Product,
                     attributes: ['id', 'sku', 'name', 'price', 'weight', 'stock', 'categoryId', 'createdAt', 'updatedAt'],
-                    through: { attributes: [] } // Exclude association data
+                    through: { attributes: [] }, // Exclude association data
+                    include: [{
+                        model: ProductGallery,
+                        attributes: ['id', 'imageUrl', 'createdAt', 'updatedAt']
+                    }]
                 }]
             });
             // Remove PromoProduct from the nested Product objects
@@ -29,7 +33,11 @@ class PromoController {
                 include: [{
                     model: Product,
                     attributes: ['id', 'sku', 'name', 'price', 'weight', 'stock', 'categoryId', 'createdAt', 'updatedAt'],
-                    through: { attributes: [] } // Exclude association data
+                    through: { attributes: [] }, // Exclude association data
+                    include: [{
+                        model: ProductGallery,
+                        attributes: ['id', 'imageUrl', 'createdAt', 'updatedAt']
+                    }]
                 }]
             });
             // Remove PromoProduct from the nested Product objects
