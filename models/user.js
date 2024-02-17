@@ -13,6 +13,7 @@ module.exports = (sequelize, DataTypes) => {
       // define association here
       User.belongsTo(models.ReferralCode, {foreignKey: 'privateReferralCodeId'})
       User.belongsTo(models.ReferralCode, {foreignKey: 'reedemedReferralCodeId'})
+      User.hasOne(models.Cart, {foreignKey: 'userId'})
     }
   }
   User.init({

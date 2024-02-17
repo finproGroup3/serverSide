@@ -14,10 +14,10 @@ class AdminController {
 
     static async register(req, res, next) {
         try {
-            const { email, password } = req.body;
+            const { username, password } = req.body;
             const hashedPassword = await bcrypt.hash(password, 10);
             const newAdmin = await Admin.create({
-                email,
+                username,
                 password: hashedPassword
             });
 
@@ -29,23 +29,24 @@ class AdminController {
 
     static async login(req, res, next) {
         try {
-            const { email, password } = req.body;
-            const admin = await Admin.findOne({ where: { email } });
+            const { username, password } = req.body;
+            const admin = await Admin.findOne({ where: { username } });
 
             if (!admin) {
-                return res.status(401).json({ status: 'error', code: 401, message: 'Incorrect email or password' });
+                return res.status(401).json({ status: 'error', code: 401, message: 'Incorrect username or password' });
             }
 
             const isPasswordValid = await bcrypt.compare(password, admin.password);
 
             if (!isPasswordValid) {
-                return res.status(401).json({ status: 'error', code: 401, message: 'Incorrect email or password' });
+                return res.status(401).json({ status: 'error', code: 401, message: 'Incorrect username or password' });
             }
 
+            // Generate JWT token with admin's ID, username, and role
             const token = jwt.sign(
-                { adminId: admin.id, email: admin.email },
-                'your-secret-key',
-                { expiresIn: '1h' }
+                { adminId: admin.id, username: admin.username, role: 'admin' }, 
+                process.env.SECRET_KEY,
+                { expiresIn: '12h' }
             );
 
             res.status(200).json({ status: 'success', code: 200, data: { token }, message: 'Login successful' });

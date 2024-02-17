@@ -1,4 +1,11 @@
 const { Cart, Product, CartProduct, Promo, PromoProduct, Order } = require('../models');
+const { Sequelize } = require('sequelize');
+
+// Create a new Sequelize instance
+const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.PASSWORD, {
+    host: process.env.HOST,
+    dialect: 'postgres',
+});
 
 class CartController {
 
@@ -19,12 +26,9 @@ class CartController {
             next(error);
         }
     }
-
-
     static async getAllProductsInCart(req, res, next) {
         try {
             const cartId = req.params.cartId;
-
             // Find all products in the cart
             const cartProducts = await CartProduct.findAll({
                 where: { cartId },
@@ -38,16 +42,18 @@ class CartController {
     }
 
     static async addAndnUpdateProductToCart(req, res, next) {
+        const t = await sequelize.transaction();
+
         try {
             const { productId, quantity } = req.body;
             const cartId = req.params.cartId;
             // Find the cart by ID
-            const cart = await Cart.findByPk(cartId);
+            const cart = await Cart.findByPk(cartId, { transaction: t });
             if (!cart) {
                 return res.status(404).json({ status: 'failed', code: 404, message: 'Cart not found' });
             }
             // Find the product by ID to get its price
-            const product = await Product.findByPk(productId);
+            const product = await Product.findByPk(productId, { transaction: t });
             if (!product) {
                 return res.status(404).json({ status: 'failed', code: 404, message: 'Product not found' });
             }
@@ -56,46 +62,54 @@ class CartController {
 
             // Check if the product already exists in the cart
             const existingCartItem = await CartProduct.findOne({
-                where: { cartId, productId }
+                where: { cartId, productId },
+                transaction: t
             });
 
             if (existingCartItem) {
                 // If the product already exists in the cart, update the quantity and total price
-                await existingCartItem.update({ quantity, price });
+                await existingCartItem.update({ quantity, price }, { transaction: t });
             } else {
                 // If the product does not exist in the cart, add it
-                await CartProduct.create({ cartId, productId, quantity, price });
+                await CartProduct.create({ cartId, productId, quantity, price }, { transaction: t });
             }
 
             // Update the totalPrice and nettPrice of the cart
             const totalPrice = cart.totalPrice + price;
             const nettPrice = cart.nettPrice + price;
-            await cart.update({ totalPrice, nettPrice });
+            await cart.update({ totalPrice, nettPrice }, { transaction: t });
 
             // Get the userId from the cart
             const userId = cart.userId;
-            const order = await Order.findOne({ where: { userId } });
+            const order = await Order.findOne({ where: { userId }, transaction: t });
 
             // If user is first order
             if (!order) {
                 const totalAffiliate = nettPrice / 2;
                 const updatedNettPrice = nettPrice - totalAffiliate;
-                await cart.update({ totalAffiliate, nettPrice: updatedNettPrice });
+                await cart.update({ totalAffiliate, nettPrice: updatedNettPrice }, { transaction: t });
             }
+
+            // Commit the transaction
+            await t.commit();
 
             res.status(200).json({ status: 'success', code: 200, message: 'Product added/updated to cart', totalPrice, nettPrice });
         } catch (error) {
+            // Rollback the transaction in case of error
+            await t.rollback();
             next(error);
         }
     }
 
 
     static async addPromoToCart(req, res, next) {
+        const t = await sequelize.transaction();
+
         try {
             const { promoId } = req.body;
             const cartId = req.params.cartId;
             // Find the promo by ID
-            const promo = await Promo.findByPk(promoId);
+            const promo = await Promo.findByPk(promoId, { transaction: t });
             if (!promo) {
                 return res.status(404).json({ status: 'failed', code: 404, message: 'Promo not found' });
             }
@@ -105,7 +119,7 @@ class CartController {
             }
             if (promo.isGlobal === true) {
                 // If the promo is global, directly insert promoId to the cart
-                const cart = await Cart.findByPk(cartId);
+                const cart = await Cart.findByPk(cartId, { transaction: t });
                 if (!cart) {
                     return res.status(404).json({ status: 'failed', code: 404, message: 'Cart not found' });
                 }
@@ -116,15 +130,15 @@ class CartController {
                 const updatedNettPrice = nettPrice - totalDiscount;
 
                 // Update the promo quota if the promo is successfully applied
-                await promo.update({ quota: promo.quota - 1 });
+                await promo.update({ quota: promo.quota - 1 }, { transaction: t });
                 // Update the cart with promo details
-                await cart.update({ promoId, totalDiscount, nettPrice: updatedNettPrice });
+                await cart.update({ promoId, totalDiscount, nettPrice: updatedNettPrice }, { transaction: t });
             } else {
-                const cartProducts = await CartProduct.findAll({ where: { cartId } });
+                const cartProducts = await CartProduct.findAll({ where: { cartId }, transaction: t });
                 const productIds = cartProducts.map(cartProduct => cartProduct.productId);
 
                 // Find all PromoProducts for the given promoId
-                const promoProducts = await PromoProduct.findAll({ where: { promoId } });
+                const promoProducts = await PromoProduct.findAll({ where: { promoId }, transaction: t });
                 const promoProductIds = promoProducts.map(promoProduct => promoProduct.productId);
 
                 // Check if all productIds in cartProducts are present in promoProductIds
@@ -135,7 +149,7 @@ class CartController {
                 }
 
                 // If all products in the cart are eligible, update the cart with the promoId
-                const cart = await Cart.findByPk(cartId);
+                const cart = await Cart.findByPk(cartId, { transaction: t });
 
                 if (!cart) {
                     return res.status(404).json({ status: 'failed', code: 404, message: 'Cart not found' });
@@ -148,57 +162,78 @@ class CartController {
                 const updatedNettPrice = nettPrice - totalDiscount;
 
                 // Update the promo quota if the promo is successfully applied
-                await promo.update({ quota: promo.quota - 1 });
+                await promo.update({ quota: promo.quota - 1 }, { transaction: t });
                 // Update the cart with promo details
-                await cart.update({ promoId, totalDiscount, nettPrice: updatedNettPrice });
+                await cart.update({ promoId, totalDiscount, nettPrice: updatedNettPrice }, { transaction: t });
                 res.status(200).json({ status: 'success', code: 200, message: 'Promo added to cart' });
             }
+
+            // Commit the transaction
+            await t.commit();
         } catch (error) {
+            // Rollback the transaction in case of error
+            await t.rollback();
             next(error);
         }
     }
 
+
     static async changeProductQuantity(req, res, next) {
+        const t = await sequelize.transaction();
         try {
             const cartProductId = req.params.productId;
             const cartId = req.params.cartId;
             const { quantity } = req.body;
             // Find the cart product by ID and cart ID
             const cartProduct = await CartProduct.findOne({
-                where: { productId: cartProductId, cartId: cartId }
+                where: { productId: cartProductId, cartId: cartId },
+                transaction: t
             });
             if (!cartProduct) {
                 return res.status(404).json({ status: 'failed', code: 404, message: 'Cart product not found' });
             }
-            // Update the quantity of the cart product
-            await cartProduct.update({ quantity });
+            // Update the quantity of the cart product within the transaction
+            await cartProduct.update({ quantity }, { transaction: t });
+            // Commit the transaction if the update is successful
+            await t.commit();
             res.status(200).json({ status: 'success', code: 200, message: 'Cart product quantity updated' });
         } catch (error) {
+            // Rollback the transaction in case of error
+            await t.rollback();
             next(error);
         }
     }
 
+
     static async removeProductFromCart(req, res, next) {
+        const t = await sequelize.transaction();
+
         try {
             const cartProductId = req.params.productId;
             const cartId = req.params.cartId;
 
-            // Find the cart product by ID and cart ID
+            // Find the cart product by ID and cart ID within the transaction
             const cartProduct = await CartProduct.findOne({
-                where: { productId: cartProductId, cartId: cartId }
+                where: { productId: cartProductId, cartId: cartId },
+                transaction: t
             });
             if (!cartProduct) {
                 return res.status(404).json({ status: 'failed', code: 404, message: 'Cart product not found' });
             }
+            // Delete the cart product within the transaction
+            await cartProduct.destroy({ transaction: t });
 
-            // Delete the cart product
-            await cartProduct.destroy();
+            // Commit the transaction if the deletion is successful
+            await t.commit();
 
             res.status(200).json({ status: 'success', code: 200, message: 'Product removed from cart' });
         } catch (error) {
+            // Rollback the transaction in case of error
+            await t.rollback();
             next(error);
         }
     }
+
 }
 
 module.exports = CartController;

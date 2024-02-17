@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const CartController = require('../controller/cart_controller.js');
+const authorize = require('../middleware/authorize');
 
 // Route to get all columns of the cart
 router.get('/:cartId', CartController.getCart);

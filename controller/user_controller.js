@@ -180,9 +180,9 @@ class UserController {
 
             // Create JWT token
             const token = jwt.sign(
-                { userId: user.id, email: user.email },
-                'your-secret-key', // Replace with a secure secret key
-                { expiresIn: '1h' } // Set token expiration time
+                { userId: user.id, email: user.email, role: 'user' },
+                process.env.SECRET_KEY, 
+                { expiresIn: '12h' } // Set token expiration time
             );
 
             // Return response with user data and token
@@ -192,6 +192,43 @@ class UserController {
         }
     }
 
+    static async editProfile(req, res, next) {
+        try {
+            // Use multer middleware to handle form-data
+            upload.single('profilePicture')(req, res, async function (err) {
+                if (err instanceof multer.MulterError) {
+                    return res.status(400).json({ status: 'failed', code: 400, message: 'Error uploading file' });
+                } else if (err) {
+                    return res.status(500).json({ status: 'failed', code: 500, message: 'Internal server error' });
+                }
+                // Extract the user ID from the request parameters
+                const userId = req.params.id;
+                // Find the user by ID in the database
+                const user = await User.findByPk(userId);
+                // If user is not found, send a 404 response
+                if (!user) {
+                    return res.status(404).json({ status: 'failed', code: 404, message: 'User not found' });
+                }
+                // Destructure data from body request
+                const { email, username, cityId, provinceId, address } = req.body;
+                // After handling file upload with multer
+                const profilePicture = req.file ? req.file.filename : user.profilePicture;
+                // Update the user's information in the database
+                await user.update({
+                    email,
+                    username,
+                    cityId,
+                    provinceId,
+                    address,
+                    profilePicture
+                });
+                // Return response indicating success
+                res.status(200).json({ status: 'success', code: 200, data: user, message: 'User profile updated successfully' });
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
 
 }
 

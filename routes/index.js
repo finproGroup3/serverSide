@@ -7,13 +7,15 @@ const promoRouter = require("./promo")
 const cartRouter = require("./cart")
 const orderRouter = require("./order")
 const categoryRouter = require("./category")
+const getImageRouter = require("./getImage")
 
 router.use("/users", userRouter);
-router.use("/admins", adminRouter);
+router.use("/admin", adminRouter);
 router.use("/product", productRouter);
 router.use("/promo", promoRouter);
 router.use("/cart", cartRouter);
 router.use("/order", orderRouter);
 router.use("/category", categoryRouter);
+router.use("/uploads", getImageRouter);
 
 module.exports = router;
