@@ -26,7 +26,7 @@ router.get('/', authorize, (req, res, next) => {
 });
 
 // Route to update the status of a product in an order
-router.put('/:orderId/products/:productId/status', authorize, (req, res, next) => {
+router.put('/:orderId/status', authorize, (req, res, next) => {
     if (req.userRole !== 'admin') {
         return res.status(403).json({ status: 'failed', code: 403, message: 'Forbidden: Insufficient permissions' });
     }

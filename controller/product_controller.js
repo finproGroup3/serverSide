@@ -1,7 +1,8 @@
 const { Product, Category, ProductGallery } = require('../models');
 const multer = require('multer');
 const path = require('path');
-const { Sequelize } = require('sequelize');
+const { Sequelize, Op } = require('sequelize');
+
 
 // Create a new Sequelize instance
 const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.PASSWORD, {
@@ -52,7 +53,7 @@ class ProductController {
                 attributes: { exclude: ['categoryId'] }
             });
             if (!product) {
-                throw {name: 'not_found', message: "product not found" }
+                throw { name: 'not_found', message: "product not found" }
             }
             res.status(200).json({ status: 'success', code: 200, data: product, message: 'Product retrieved successfully' });
         } catch (error) {
@@ -117,10 +118,10 @@ class ProductController {
         try {
             upload(req, res, async function (err) {
                 if (err) {
-                    throw {name: 'not_found', message: "gagal upload image" }
+                    throw { name: 'not_found', message: "Failed to upload image" };
                 }
                 const productId = req.params.id;
-                const { sku, name, price, weight, stock, categoryId } = req.body;
+                const { sku, name, price, weight, stock, categoryId, destroyGallery } = req.body;
                 const product = await Product.findByPk(productId, { include: ProductGallery });
                 if (!product) {
                     return res.status(404).json({ status: 'failed', code: 404, message: 'Product not found' });
@@ -134,32 +135,50 @@ class ProductController {
                     stock,
                     categoryId
                 }, { transaction: t });
+                if (destroyGallery) {
+                    // Parse destroyGallery into an array if it's not already
+                    const galleryIds = Array.isArray(destroyGallery) ? destroyGallery : JSON.parse(destroyGallery);
+                    // Delete product galleries if specified
+                    if (galleryIds && galleryIds.length > 0) {
+                        // Convert array of IDs to integers
+                        const parsedGalleryIds = galleryIds.map(id => parseInt(id));
+                        // Delete galleries
+                        await ProductGallery.destroy({
+                            where: {
+                                id: {
+                                    [Op.in]: parsedGalleryIds
+                                }
+                            },
+                            transaction: t
+                        });
+                    }
+                }
 
-                // Delete all existing product galleries associated with the product within the transaction
-                await ProductGallery.destroy({ where: { productId }, transaction: t });
                 // Create an array to store the promises for creating product galleries
                 const productGalleries = [];
+                if (req.files.length > 0) {
+                    // Create an array to store the promises for creating product galleries
+                    const productGalleries = [];
+                    // Loop through each file and create a product gallery
+                    req.files.forEach((file) => {
+                        const imageUrl = file.filename;
+                        // Create the product gallery and push the promise to the array
+                        productGalleries.push(ProductGallery.create({
+                            productId: product.id,
+                            imageUrl
+                        }, { transaction: t }));
+                    });
 
-                // Loop through each file and create a product gallery
-                req.files.forEach((file) => {
-                    const imageUrl = file.filename;
-                    // Create the product gallery and push the promise to the array
-                    productGalleries.push(ProductGallery.create({
-                        productId: product.id, // Corrected from newProduct.id
-                        imageUrl
-                    }, { transaction: t }));
-                });
+                    // Wait for all product galleries to be created
+                    await Promise.all(productGalleries);
 
-                // Wait for all product galleries to be created
-                await Promise.all(productGalleries);
-
-                // Fetch the updated product with associated galleries
-                const updatedProduct = await Product.findByPk(productId, { include: ProductGallery });
-
+                    // Fetch the updated product with associated galleries
+                    const updatedProduct = await Product.findByPk(productId, { include: ProductGallery });
+                    res.status(200).json({ status: 'success', code: 200, data: updatedProduct, message: 'Product updated successfully' });
+                }
                 // Commit the transaction if everything is successful
                 await t.commit();
-
-                res.status(200).json({ status: 'success', code: 200, data: updatedProduct, message: 'Product updated successfully' });
+                res.status(200).json({ status: 'success', code: 200, message: 'Product updated successfully' });
             });
         } catch (error) {
             // Rollback the transaction in case of error
@@ -167,6 +186,7 @@ class ProductController {
             next(error);
         }
     }
+
 
     static async deleteProduct(req, res, next) {
         const t = await sequelize.transaction();
