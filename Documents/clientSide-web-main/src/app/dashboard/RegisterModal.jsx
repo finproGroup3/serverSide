@@ -53,10 +53,6 @@ function RegisterModal({ open, onClose }) {
         "http://localhost:3000/users/register",
         formDataToSend
       );
-      console.log(response.data); // or do something with the response
-
-      // Menyimpan data ke local storage setelah berhasil mendaftar
-      localStorage.setItem('registeredUser', JSON.stringify(formData));
       
       onClose();
       setFormData(initialFormData);
