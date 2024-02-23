@@ -14,7 +14,7 @@ class CartController {
             const cartId = req.params.cartId;
             // Find the cart by ID
             const cart = await Cart.findByPk(cartId, {
-                include: [{ model: CartProduct }]
+                include: [{ model: Product }]
             });
 
             if (!cart) {
