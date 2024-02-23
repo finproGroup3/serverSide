@@ -98,7 +98,6 @@ class PromoController {
 
     static async editPromo(req, res, next) {
         const t = await sequelize.transaction();
-
         try {
             const promoId = req.params.id;
             const { code, percentage, quota, isActive, isGlobal, description, productIds } = req.body;
@@ -106,7 +105,6 @@ class PromoController {
             if (!promo) {
                 return res.status(404).json({ status: 'failed', code: 404, message: 'Promo not found' });
             }
-
             // Update the promo details within the transaction
             await promo.update({ code, percentage, quota, isActive, isGlobal, description }, { transaction: t });
 
@@ -157,7 +155,6 @@ class PromoController {
 
     static async deactivatePromo(req, res, next) {
         const t = await sequelize.transaction();
-
         try {
             const promoId = req.params.id;
             const promo = await Promo.findByPk(promoId, { transaction: t });

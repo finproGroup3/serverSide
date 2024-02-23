@@ -7,6 +7,7 @@ const promoRouter = require("./promo")
 const cartRouter = require("./cart")
 const orderRouter = require("./order")
 const categoryRouter = require("./category")
+const storeRouter = require("./store")
 const getImageRouter = require("./getImage")
 
 router.use("/users", userRouter);
@@ -17,5 +18,6 @@ router.use("/cart", cartRouter);
 router.use("/order", orderRouter);
 router.use("/category", categoryRouter);
 router.use("/uploads", getImageRouter);
+router.use("/store", storeRouter);
 
 module.exports = router;

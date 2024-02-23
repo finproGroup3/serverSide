@@ -37,7 +37,6 @@ router.put('/activate/:id', authorize, (req, res, next) => {
     // If user is an admin, proceed to PromoController.activatePromo
     PromoController.activatePromo(req, res, next);
 });
-
 // Route to deactivate a promo (only accessible by admins)
 router.put('/deactivate/:id', authorize, (req, res, next) => {
     // Check if user is an admin

@@ -4,7 +4,14 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { User, ReferralCode, Cart } = require('../models');
+const { Sequelize } = require('sequelize');
 
+
+// Create a new Sequelize instance
+const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.PASSWORD, {
+    host: process.env.HOST,
+    dialect: 'postgres',
+});
 // Set up multer storage
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -163,7 +170,15 @@ class UserController {
             const { email, password } = req.body;
 
             // Find user based on email
-            const user = await User.findOne({ where: { email } });
+            const user = await User.findOne({
+                where: { email },
+                include: [
+                    {
+                        model: Cart
+                    }
+                ]
+            });
+
 
             // If user not found, send error response
             if (!user) {
@@ -181,7 +196,7 @@ class UserController {
             // Create JWT token
             const token = jwt.sign(
                 { userId: user.id, email: user.email, role: 'user' },
-                process.env.SECRET_KEY, 
+                process.env.SECRET_KEY,
                 { expiresIn: '12h' } // Set token expiration time
             );
 

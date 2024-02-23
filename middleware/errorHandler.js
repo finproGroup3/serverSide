@@ -11,7 +11,7 @@ function errorHandler(err, req, res, next) {
     else if (err.name === "failed_upload") {
         res.status(400).json(errorResponse);
     }
-    res.status(500).json({ message: "internal server eror" })
+    res.status(500).json({ message: "internal server error" })
 }
 
 module.exports = errorHandler

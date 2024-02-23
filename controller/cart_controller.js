@@ -177,7 +177,6 @@ class CartController {
         }
     }
 
-
     static async changeProductQuantity(req, res, next) {
         const t = await sequelize.transaction();
         try {
