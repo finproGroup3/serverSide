@@ -11,17 +11,19 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      User.belongsTo(models.ReferralCode, {foreignKey: 'privateReferralCodeId'})
-      User.belongsTo(models.ReferralCode, {foreignKey: 'reedemedReferralCodeId'})
-      User.hasOne(models.Cart, {foreignKey: 'userId'})
+      User.belongsTo(models.ReferralCode, { foreignKey: 'privateReferralCodeId' })
+      User.belongsTo(models.ReferralCode, { foreignKey: 'reedemedReferralCodeId' })
+      User.hasOne(models.Cart, { foreignKey: 'userId' })
+      User.belongsTo(models.City, { foreignKey: 'cityId' });
+      User.belongsTo(models.Province, { foreignKey: 'provinceId' });
     }
   }
   User.init({
     email: DataTypes.STRING,
     password: DataTypes.STRING,
     username: DataTypes.STRING,
-    cityId: DataTypes.INTEGER,
-    provinceId: DataTypes.INTEGER,
+    cityId: DataTypes.STRING,
+    provinceId: DataTypes.STRING,
     address: DataTypes.STRING,
     role: DataTypes.STRING,
     privateReferralCodeId: DataTypes.INTEGER,

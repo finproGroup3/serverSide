@@ -10,12 +10,7 @@ router.get('/', authorize, (req, res, next) => {
     return AdminController.getAll(req, res, next);
 });
 
-router.post('/register', authorize, (req, res, next) => {
-    if (req.userRole !== 'admin') {
-        return res.status(403).json({ status: 'failed', code: 403, message: 'Forbidden: Insufficient permissions' });
-    }
-    return AdminController.register(req, res, next);
-});
+router.post('/register', AdminController.register);
 
 router.post('/login', AdminController.login);
 

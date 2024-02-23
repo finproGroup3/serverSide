@@ -163,7 +163,12 @@ class UserController {
             const { email, password } = req.body;
 
             // Find user based on email
-            const user = await User.findOne({ where: { email } });
+            const user = await User.findOne({
+                where: { email },
+                include: {
+                    model: ReferralCode
+                }
+            });
 
             // If user not found, send error response
             if (!user) {
@@ -181,7 +186,7 @@ class UserController {
             // Create JWT token
             const token = jwt.sign(
                 { userId: user.id, email: user.email, role: 'user' },
-                process.env.SECRET_KEY, 
+                process.env.SECRET_KEY,
                 { expiresIn: '12h' } // Set token expiration time
             );
 

@@ -16,7 +16,12 @@ router.post('/', authorize, (req, res, next) => {
     }
     return ProductController.addProduct(req, res, next);
 });
-
+router.get('/top-products', authorize, (req, res, next) => {
+    if (req.userRole !== 'admin') {
+        return res.status(403).json({ status: 'failed', code: 403, message: 'Forbidden: Insufficient permissions' });
+    }
+    return ProductController.getTopSellingProducts(req, res, next);
+});
 // PUT edit product (only admin can access)
 router.put('/:id', authorize, (req, res, next) => {
     if (req.userRole !== 'admin') {

@@ -1,15 +1,75 @@
-const { Order, OrderProduct, Cart, CartProduct, User, Product, Promo } = require('../models');
+const { Order, OrderProduct, Cart, CartProduct, User, Product, Promo, City, Province } = require('../models');
 const { Sequelize } = require('sequelize');
+const { Op } = require('sequelize');
 const multer = require('multer');
 const path = require('path');
 const PDFDocument = require('pdfkit-table');
 const fs = require('fs');
+const axios = require('axios');
+
 
 // Create a new Sequelize instance
 const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.PASSWORD, {
     host: process.env.HOST,
     dialect: 'postgres',
 });
+// Define the function to fetch shipping costs
+function fetchShippingCost(origin, destination, weight, courier) {
+    return new Promise((resolve, reject) => {
+        const data = {
+            origin,
+            destination,
+            weight,
+            courier
+        };
+
+        axios.post('https://api.rajaongkir.com/starter/cost', data, {
+            headers: {
+                key: process.env.API_KEY,
+                'content-type': 'application/x-www-form-urlencoded'
+            }
+        })
+            .then(response => {
+                resolve(response.data);
+            })
+            .catch(error => {
+                reject(error);
+            });
+    });
+}
+
+function fetchProvince() {
+    return new Promise((resolve, reject) => {
+        axios.get('https://api.rajaongkir.com/starter/province', {
+            headers: {
+                key: process.env.API_KEY
+            }
+        })
+            .then(response => {
+                resolve(response.data);
+            })
+            .catch(error => {
+                reject(error);
+            });
+    });
+}
+function fetchCity() {
+    return new Promise((resolve, reject) => {
+        axios.get('https://api.rajaongkir.com/starter/city', {
+            headers: {
+                key: process.env.API_KEY
+            }
+        })
+            .then(response => {
+                resolve(response.data);
+            })
+            .catch(error => {
+                reject(error);
+            });
+    });
+}
+
+
 
 // Set up multer storage
 const storage = multer.diskStorage({
@@ -223,12 +283,16 @@ class OrderController {
     static async getOrdersByUserId(req, res, next) {
         try {
             const userId = req.params.userId;
-            const orders = await Order.findAll({ where: { userId } });
+            const orders = await Order.findAll({
+                where: { userId },
+                include: [{ model: OrderProduct }] // Include OrderProduct model
+            });
             res.status(200).json({ status: 'success', code: 200, data: orders, message: 'Orders retrieved successfully' });
         } catch (error) {
             next(error);
         }
     }
+
 
     static async getTopBuyers(req, res, next) {
         try {
@@ -252,37 +316,139 @@ class OrderController {
             next(error);
         }
     }
+    static async getOrdersByOrderId(req, res, next) {
+        try {
+            const orderId = req.params.id; // Assuming you're fetching orders by their ID
+            const orders = await Order.findAll({
+                where: { id: orderId }, // Correctly filter orders by their ID
+                include: [{ model: OrderProduct }] // Include OrderProduct model if needed
+            });
+            res.status(200).json({ status: 'success', code: 200, data: orders, message: 'Orders retrieved successfully' });
+        } catch (error) {
+            next(error);
+        }
+    }
 
     static async getHighestSellingProducts(req, res, next) {
         try {
             const highestSellingProducts = await OrderProduct.findAll({
                 attributes: [
                     'productId',
-                    [sequelize.fn('SUM', sequelize.col('quantity')), 'TotalQuantitySold'] // Ensure the alias is properly defined
+                    [sequelize.fn('SUM', sequelize.col('quantity')), 'TotalQuantitySold']
                 ],
-                include: [{
-                    model: Order,
-                    attributes: [],
-                    where: { status: 'succeed' }
-                }, {
-                    model: Product,
-                    attributes: ['id', 'name'], // Include the id attribute from the Product model
-                }],
-                group: ['OrderProduct.productId', 'Product.id'], // Adjust the GROUP BY clause
-                order: [[sequelize.fn('SUM', sequelize.col('quantity')), 'DESC']],
+                include: [
+                    {
+                        model: Product,
+                        attributes: ['id', 'name']
+                    }
+                ],
+                group: ['productId', 'Product.id'],
+                order: [[sequelize.literal('SUM(quantity)'), 'DESC']],
                 limit: 5
             });
-            // Manipulate the result to match the desired output format
+
             const formattedData = highestSellingProducts.map(item => ({
                 productId: item.productId,
-                TotalQuantitySold: item.dataValues.TotalQuantitySold, // Access TotalQuantitySold from dataValues
+                TotalQuantitySold: item.dataValues.TotalQuantitySold,
                 ProductName: item.Product.name
             }));
+
             res.status(200).json({ status: 'success', code: 200, data: formattedData, message: 'Highest selling products retrieved successfully' });
         } catch (error) {
             next(error);
         }
     }
+    static async getShippingCost(req, res, next) {
+        try {
+            const { origin, destination, weight, courier } = req.body;
+
+            // Fetch shipping costs from RajaOngkir API
+            const result = await fetchShippingCost(origin, destination, weight, courier);
+
+            // Send the shipping cost data as response
+            res.status(200).json({ status: 'success', data: result });
+        } catch (error) {
+            // Handle errors
+            res.status(500).json({ status: 'error', message: error.message });
+        }
+    }
+    static async getCitiesByProvince(req, res, next) {
+        try {
+            const { idProvince } = req.params;
+
+            // Parse idProvince to an integer
+            const provinceId = parseInt(idProvince);
+
+            // Find the province by id
+            const province = await Province.findOne({
+                where: { id: provinceId }
+            });
+
+            if (!province) {
+                return res.status(404).json({ status: 'error', message: 'Province not found' });
+            }
+
+            // Find all cities belonging to the province
+            const cities = await City.findAll({
+                where: { provinceId: province.id }
+            });
+
+            res.status(200).json({ status: 'success', data: cities });
+        } catch (error) {
+            res.status(500).json({ status: 'error', message: error.message });
+        }
+    }
+
+    static async getProvinces(req, res, next) {
+        try {
+            // Fetch all provinces from the database
+            const provinces = await Province.findAll();
+
+            res.status(200).json({ status: 'success', data: provinces });
+        } catch (error) {
+            res.status(500).json({ status: 'error', message: error.message });
+        }
+    }
+    static async getProvinceIdByName(req, res, next) {
+        try {
+            const { name } = req.body;
+
+            // Find the province by name (case-insensitive)
+            const province = await Province.findOne({
+                where: { name: { [Op.iLike]: '%' + name + '%' } }
+            });
+
+            if (!province) {
+                return res.status(404).json({ status: 'error', message: 'Province not found' });
+            }
+
+            res.status(200).json({ status: 'success', data: province.id });
+        } catch (error) {
+            res.status(500).json({ status: 'error', message: error.message });
+        }
+    }
+
+    static async getCityIdByName(req, res, next) {
+        try {
+            const { name } = req.body;
+
+            // Find the city by name (case-insensitive)
+            const city = await City.findOne({
+                where: { name: { [Op.iLike]: '%' + name + '%' } }
+            });
+
+            if (!city) {
+                return res.status(404).json({ status: 'error', message: 'City not found' });
+            }
+
+            res.status(200).json({ status: 'success', data: city.id });
+        } catch (error) {
+            res.status(500).json({ status: 'error', message: error.message });
+        }
+    }
+
+
+
 }
 
 module.exports = OrderController;

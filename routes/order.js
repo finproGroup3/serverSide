@@ -41,10 +41,29 @@ router.get('/top-buyers', authorize, (req, res, next) => {
     return OrderController.getTopBuyers(req, res, next);
 });
 
+// Route to get shipping cost
+router.post('/cost', authorize, OrderController.getShippingCost);
+
+// Route to get list of provinces
+router.get('/provinces', authorize, OrderController.getProvinces);
+
+// Route to get list of cities
+router.get('/cities/:idProvince', authorize, OrderController.getCitiesByProvince);
+
+router.get('/:id', authorize, OrderController.getOrdersByOrderId);
+
 // Route to get all orders with the same userId
 router.get('/user/:userId', authorize, OrderController.getOrdersByUserId);
 
-// Route to get highest selling products
-router.get('/top-products', authorize, OrderController.getHighestSellingProducts);
+router.post('/province-id', authorize, OrderController.getProvinceIdByName);
+
+router.post('/city-id', authorize, OrderController.getCityIdByName);
+
+router.get('/top/product', authorize, (req, res, next) => {
+    if (req.userRole !== 'admin') {
+        return res.status(403).json({ status: 'failed', code: 403, message: 'Forbidden: Insufficient permissions' });
+    }
+    return OrderController.getHighestSellingProducts(req, res, next);
+});
 
 module.exports = router;

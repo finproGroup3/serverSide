@@ -1,4 +1,4 @@
-const { Product, Category, ProductGallery } = require('../models');
+const { Product, Category, ProductGallery, OrderProduct } = require('../models');
 const multer = require('multer');
 const path = require('path');
 const { Sequelize, Op } = require('sequelize');
@@ -156,9 +156,7 @@ class ProductController {
 
                 // Create an array to store the promises for creating product galleries
                 const productGalleries = [];
-                if (req.files.length > 0) {
-                    // Create an array to store the promises for creating product galleries
-                    const productGalleries = [];
+                if (req.files && req.files.length > 0) {
                     // Loop through each file and create a product gallery
                     req.files.forEach((file) => {
                         const imageUrl = file.filename;
@@ -171,14 +169,15 @@ class ProductController {
 
                     // Wait for all product galleries to be created
                     await Promise.all(productGalleries);
-
-                    // Fetch the updated product with associated galleries
-                    const updatedProduct = await Product.findByPk(productId, { include: ProductGallery });
-                    res.status(200).json({ status: 'success', code: 200, data: updatedProduct, message: 'Product updated successfully' });
                 }
+
+                // Fetch the updated product with associated galleries
+                const updatedProduct = await Product.findByPk(productId, { include: ProductGallery });
+
                 // Commit the transaction if everything is successful
                 await t.commit();
-                res.status(200).json({ status: 'success', code: 200, message: 'Product updated successfully' });
+
+                res.status(200).json({ status: 'success', code: 200, data: updatedProduct, message: 'Product updated successfully' });
             });
         } catch (error) {
             // Rollback the transaction in case of error
@@ -187,6 +186,13 @@ class ProductController {
         }
     }
 
+    static async getTopSellingProducts(req, res, next) {
+        try {
+            console.log('object');
+        } catch (error) {
+            next(error);
+        }
+    }
 
     static async deleteProduct(req, res, next) {
         const t = await sequelize.transaction();
