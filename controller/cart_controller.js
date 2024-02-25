@@ -109,7 +109,6 @@ class CartController {
             // Update the totalPrice and nettPrice of the cart
             const totalPrice = totalPriceInCart;
             const nettPrice = totalPriceInCart - cart.shippingCost - cart.totalDiscount;
-            console.log(nettPrice);
             await cart.update({ totalPrice, nettPrice }, { transaction: t });
 
             // Get the userId from the cart
@@ -247,18 +246,27 @@ class CartController {
         try {
             const cartProductId = req.params.productId;
             const cartId = req.params.cartId;
-
+            // Find the cart by ID
+            const cart = await Cart.findByPk(cartId, { transaction: t });
             // Find the cart product by ID and cart ID within the transaction
-            const cartProduct = await CartProduct.findOne({
+            const cartProductCondition = await CartProduct.findOne({
                 where: { productId: cartProductId, cartId: cartId },
                 transaction: t
             });
-            if (!cartProduct) {
+            if (!cartProductCondition) {
                 return res.status(404).json({ status: 'failed', code: 404, message: 'Cart product not found' });
             }
-            // Delete the cart product within the transaction
-            await cartProduct.destroy({ transaction: t });
+            // Sum all the prices in CartProduct with the same cartId
+            const totalPriceInCart = await CartProduct.sum('price', { where: { productId: cartProductId }, transaction: t });
 
+            // Update the totalPrice and nettPrice of the cart
+            const totalPrice = cart.totalPrice - totalPriceInCart;
+            const totalAffiliate = totalPrice / 2;
+            const nettPrice = totalPrice - totalAffiliate
+
+            await cart.update({ nettPrice, totalAffiliate, totalPrice }, { transaction: t });
+            // Delete the cart product within the transaction
+            await cartProductCondition.destroy({ transaction: t });
             // Commit the transaction if the deletion is successful
             await t.commit();
 
@@ -269,6 +277,7 @@ class CartController {
             next(error);
         }
     }
+
 
 }
 
