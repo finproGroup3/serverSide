@@ -75,7 +75,6 @@ class CartController {
 
     static async addAndnUpdateProductToCart(req, res, next) {
         const t = await sequelize.transaction();
-
         try {
             const { productId, quantity } = req.body;
             const cartId = req.params.cartId;
@@ -105,10 +104,12 @@ class CartController {
                 // If the product does not exist in the cart, add it
                 await CartProduct.create({ cartId, productId, quantity, price }, { transaction: t });
             }
-
+            // Sum all the prices in CartProduct with the same cartId
+            const totalPriceInCart = await CartProduct.sum('price', { where: { cartId }, transaction: t });
             // Update the totalPrice and nettPrice of the cart
-            const totalPrice = cart.totalPrice + price;
-            const nettPrice = cart.nettPrice + price;
+            const totalPrice = totalPriceInCart;
+            const nettPrice = totalPriceInCart - cart.shippingCost - cart.totalDiscount;
+            console.log(nettPrice);
             await cart.update({ totalPrice, nettPrice }, { transaction: t });
 
             // Get the userId from the cart
@@ -136,7 +137,6 @@ class CartController {
 
     static async addPromoToCart(req, res, next) {
         const t = await sequelize.transaction();
-
         try {
             const { promoId } = req.body;
             const cartId = req.params.cartId;
@@ -155,16 +155,18 @@ class CartController {
                 if (!cart) {
                     return res.status(404).json({ status: 'failed', code: 404, message: 'Cart not found' });
                 }
-                // Calculate the total discount based on the promo percentage
-                const nettPrice = cart.nettPrice;
-                const percentage = promo.percentage;
-                const totalDiscount = nettPrice * (percentage / 100);
-                const updatedNettPrice = nettPrice - totalDiscount;
+                if (cart.totalDiscount === 0) {
+                    // Calculate the total discount based on the promo percentage
+                    const nettPrice = cart.nettPrice;
+                    const percentage = promo.percentage;
+                    const totalDiscount = nettPrice * (percentage / 100);
+                    const updatedNettPrice = nettPrice - totalDiscount;
 
-                // Update the promo quota if the promo is successfully applied
-                await promo.update({ quota: promo.quota - 1 }, { transaction: t });
-                // Update the cart with promo details
-                await cart.update({ promoId, totalDiscount, nettPrice: updatedNettPrice }, { transaction: t });
+                    // Update the promo quota if the promo is successfully applied
+                    await promo.update({ quota: promo.quota - 1 }, { transaction: t });
+                    // Update the cart with promo details
+                    await cart.update({ promoId, totalDiscount, nettPrice: updatedNettPrice }, { transaction: t });
+                }
             } else {
                 const cartProducts = await CartProduct.findAll({ where: { cartId }, transaction: t });
                 const productIds = cartProducts.map(cartProduct => cartProduct.productId);
@@ -187,25 +189,28 @@ class CartController {
                     return res.status(404).json({ status: 'failed', code: 404, message: 'Cart not found' });
                 }
 
-                // Calculate the total discount based on the promo percentage
-                const nettPrice = cart.nettPrice;
-                const percentage = promo.percentage;
-                const totalDiscount = nettPrice * (percentage / 100);
-                const updatedNettPrice = nettPrice - totalDiscount;
+                if (cart.totalDiscount === 0) {
+                    // Calculate the total discount based on the promo percentage
+                    const nettPrice = cart.nettPrice;
+                    const percentage = promo.percentage;
+                    const totalDiscount = nettPrice * (percentage / 100);
+                    const updatedNettPrice = nettPrice - totalDiscount;
 
-                // Update the promo quota if the promo is successfully applied
-                await promo.update({ quota: promo.quota - 1 }, { transaction: t });
-                // Update the cart with promo details
-                await cart.update({ promoId, totalDiscount, nettPrice: updatedNettPrice }, { transaction: t });
-                res.status(200).json({ status: 'success', code: 200, message: 'Promo added to cart' });
+                    // Update the promo quota if the promo is successfully applied
+                    await promo.update({ quota: promo.quota - 1 }, { transaction: t });
+                    // Update the cart with promo details
+                    await cart.update({ promoId, totalDiscount, nettPrice: updatedNettPrice }, { transaction: t });
+                }
             }
 
             // Commit the transaction
             await t.commit();
+            res.status(200).json({ status: 'success', code: 200, message: 'Promo added to cart' });
         } catch (error) {
             // Rollback the transaction in case of error
             await t.rollback();
             next(error);
+            res.status(500).json({ status: 'error', code: 500, message: 'Internal server error' });
         }
     }
 

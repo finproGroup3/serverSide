@@ -13,6 +13,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
 app.use(router);
+app.use(errorHandler)
 
 
 app.listen(port, () => {
