@@ -1,4 +1,4 @@
-const { Cart, Product, CartProduct, Promo, PromoProduct, Order } = require('../models');
+const { Cart, Product, CartProduct, Promo, PromoProduct, Order, ProductGallery } = require('../models');
 const { Sequelize } = require('sequelize');
 
 // Create a new Sequelize instance
@@ -14,32 +14,64 @@ class CartController {
             const cartId = req.params.cartId;
             // Find the cart by ID
             const cart = await Cart.findByPk(cartId, {
-                include: [{ model: CartProduct }]
+                include: [{ model: CartProduct, include: [Product] }]
             });
 
             if (!cart) {
                 return res.status(404).json({ status: 'failed', code: 404, message: 'Cart not found' });
             }
 
+            // Extracting product IDs from cart products
+            const productIds = cart.CartProducts.map(cartProduct => cartProduct.productId);
+
+            // Fetching the first imageUrl for each productId
+            const productImages = await Promise.all(productIds.map(async productId => {
+                const productGallery = await ProductGallery.findOne({
+                    where: { productId },
+                    attributes: ['imageUrl'],
+                    limit: 1
+                });
+                return { productId, imageUrl: productGallery ? productGallery.imageUrl : null };
+            }));
+
+            // Merging product images into the cart data
+            cart.CartProducts.forEach(cartProduct => {
+                const productImage = productImages.find(item => item.productId === cartProduct.productId);
+                cartProduct.Product.dataValues.imageUrl = productImage ? productImage.imageUrl : null;
+            });
+
             res.status(200).json({ status: 'success', code: 200, data: cart, message: 'Cart details retrieved' });
         } catch (error) {
             next(error);
         }
     }
+
     static async getAllProductsInCart(req, res, next) {
         try {
             const cartId = req.params.cartId;
+
             // Find all products in the cart
             const cartProducts = await CartProduct.findAll({
                 where: { cartId },
                 include: [{ model: Product }]
             });
 
-            res.status(200).json({ status: 'success', code: 200, data: cartProducts, message: 'Products retrieved from cart' });
+            // Extracting productIds from cartProducts
+            const productIds = cartProducts.map(cartProduct => cartProduct.productId);
+
+            // Find all product galleries associated with the products in the cart
+            const productGalleries = await ProductGallery.findAll({
+                where: { productId: productIds },
+                include: [{ model: Product }]
+            });
+
+            res.status(200).json({ status: 'success', code: 200, data: productGalleries, message: 'Product galleries retrieved from cart' });
         } catch (error) {
             next(error);
         }
     }
+
+
 
     static async addAndnUpdateProductToCart(req, res, next) {
         const t = await sequelize.transaction();
