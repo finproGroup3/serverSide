@@ -1,4 +1,4 @@
-const { Order, OrderProduct, Cart, CartProduct, User, Product, Promo, City, Province } = require('../models');
+const { Order, OrderProduct, Cart, CartProduct, User, Product, Promo, City, Province, ProductGallery } = require('../models');
 const { Sequelize } = require('sequelize');
 const { Op } = require('sequelize');
 const multer = require('multer');
@@ -285,9 +285,38 @@ class OrderController {
             const userId = req.params.userId;
             const orders = await Order.findAll({
                 where: { userId },
-                include: [{ model: OrderProduct }] // Include OrderProduct model
+                include: [
+                    {
+                        model: OrderProduct,
+                        include: [
+                            {
+                                model: Product,
+                                include: [{
+                                    model: ProductGallery,
+                                    attributes: ['imageUrl'],
+                                    limit: 1 // Limit to retrieve only the first ProductGallery
+                                }],
+                                as: 'Product' // Rename the included Product model
+                            }
+                        ]
+                    }
+                ]
             });
-            res.status(200).json({ status: 'success', code: 200, data: orders, message: 'Orders retrieved successfully' });
+
+            // Modify the structure of the returned data to match the desired output
+            const formattedOrders = orders.map(order => {
+                const formattedOrder = order.toJSON();
+                formattedOrder.OrderProducts.forEach(orderProduct => {
+                    if (orderProduct.Product && orderProduct.Product.ProductGalleries) {
+                        const firstProductGallery = orderProduct.Product.ProductGalleries[0];
+                        orderProduct.Product.imageUrl = firstProductGallery ? firstProductGallery.imageUrl : null;
+                        delete orderProduct.Product.ProductGalleries;
+                    }
+                });
+                return formattedOrder;
+            });
+
+            res.status(200).json({ status: 'success', code: 200, data: formattedOrders, message: 'Orders retrieved successfully' });
         } catch (error) {
             next(error);
         }
