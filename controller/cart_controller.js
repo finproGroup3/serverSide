@@ -242,7 +242,6 @@ class CartController {
 
     static async removeProductFromCart(req, res, next) {
         const t = await sequelize.transaction();
-
         try {
             const cartProductId = req.params.productId;
             const cartId = req.params.cartId;
@@ -277,6 +276,48 @@ class CartController {
             next(error);
         }
     }
+    static async removeAllProductsFromCart(req, res, next) {
+        const t = await sequelize.transaction();
+        try {
+            const cartId = req.params.cartId;
+
+            // Find the cart by ID
+            const cart = await Cart.findByPk(cartId, { transaction: t });
+
+            // Find all cart products associated with the cart ID
+            const cartProducts = await CartProduct.findAll({
+                where: { cartId: cartId },
+                transaction: t
+            });
+
+            if (!cartProducts || cartProducts.length === 0) {
+                return res.status(404).json({ status: 'failed', code: 404, message: 'No products found in the cart' });
+            }
+
+            // Sum all the prices in CartProduct with the same cartId
+            const totalPriceInCart = await CartProduct.sum('price', { where: { cartId: cartId }, transaction: t });
+
+            // Update the totalPrice, totalAffiliate, and nettPrice of the cart
+            const totalPrice = cart.totalPrice - totalPriceInCart;
+            const totalAffiliate = totalPrice / 2;
+            const nettPrice = totalPrice - totalAffiliate;
+
+            await cart.update({ nettPrice, totalAffiliate, totalPrice }, { transaction: t });
+
+            // Delete all cart products associated with the cart ID within the transaction
+            await CartProduct.destroy({ where: { cartId: cartId }, transaction: t });
+
+            // Commit the transaction if the deletion is successful
+            await t.commit();
+
+            res.status(200).json({ status: 'success', code: 200, message: 'All products removed from cart' });
+        } catch (error) {
+            // Rollback the transaction in case of error
+            await t.rollback();
+            next(error);
+        }
+    }
+
 
 
 }

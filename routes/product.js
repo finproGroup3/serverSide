@@ -4,7 +4,7 @@ const ProductController = require('../controller/product_controller.js');
 const authorize = require('../middleware/authorize');
 
 // GET all products (admin and user can access)
-router.get('/', authorize, ProductController.getAll);
+router.get('/', ProductController.getAll);
 
 // GET product by ID (admin and user can access)
 router.get('/:id', authorize, ProductController.getById);

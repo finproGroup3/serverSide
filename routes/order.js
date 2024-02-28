@@ -42,22 +42,22 @@ router.get('/top-buyers', authorize, (req, res, next) => {
 });
 
 // Route to get shipping cost
-router.post('/cost', authorize, OrderController.getShippingCost);
+router.post('/cost', OrderController.getShippingCost);
 
 // Route to get list of provinces
-router.get('/provinces', authorize, OrderController.getProvinces);
+router.get('/provinces', OrderController.getProvinces);
 
 // Route to get list of cities
-router.get('/cities/:idProvince', authorize, OrderController.getCitiesByProvince);
+router.get('/cities/:idProvince', OrderController.getCitiesByProvince);
 
 router.get('/:id', authorize, OrderController.getOrdersByOrderId);
 
 // Route to get all orders with the same userId
 router.get('/user/:userId', authorize, OrderController.getOrdersByUserId);
 
-router.post('/province-id', authorize, OrderController.getProvinceIdByName);
+router.post('/province-id', OrderController.getProvinceIdByName);
 
-router.post('/city-id', authorize, OrderController.getCityIdByName);
+router.post('/city-id', OrderController.getCityIdByName);
 
 router.get('/top/product', authorize, (req, res, next) => {
     if (req.userRole !== 'admin') {

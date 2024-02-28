@@ -18,5 +18,8 @@ router.post('/:cartId/promo', CartController.addPromoToCart);
 // Route to remove a product from the cart
 router.delete('/:cartId/product/:productId', CartController.removeProductFromCart);
 
+// Route to remove all product from the cart
+router.delete('/:cartId/product/', CartController.removeAllProductsFromCart);
+
 
 module.exports = router;

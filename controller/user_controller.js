@@ -91,7 +91,7 @@ class UserController {
                 }
 
                 // Destructure data from body request
-                const { email, password, username, cityId, provinceId, address, role, referralCode } = req.body;
+                const { email, password, username, cityId, provinceId, address, referralCode } = req.body;
 
                 // Check if user with the same email already exists
                 const existingUser = await User.findOne({ where: { email } });
@@ -140,7 +140,7 @@ class UserController {
                     cityId,
                     provinceId,
                     address,
-                    role,
+                    role: "user",
                     privateReferralCodeId: newReferralCode.id, // Associate the user with the newly created referral code
                     profilePicture,
                 });
@@ -173,12 +173,9 @@ class UserController {
             const user = await User.findOne({
                 where: { email },
                 include: [
-                    {
-                        model: Cart
-                    }
+                    { model: Cart },
                 ]
             });
-
 
             // If user not found, send error response
             if (!user) {
@@ -192,7 +189,11 @@ class UserController {
             if (!isPasswordValid) {
                 return res.status(401).json({ status: 'failed', code: 401, message: 'Password is incorrect' });
             }
-
+            // Fetch the referral code corresponding to the privateReferralCodeId
+            const privateReferralCode = await ReferralCode.findOne({
+                where: { id: user.privateReferralCodeId },
+                attributes: ['code'] // Include only the 'code' attribute
+            });
             // Create JWT token
             const token = jwt.sign(
                 { userId: user.id, email: user.email, role: 'user' },
@@ -201,11 +202,13 @@ class UserController {
             );
 
             // Return response with user data and token
-            res.status(200).json({ status: 'success', code: 200, data: user, token, message: 'User logged in successfully' });
+            res.status(200).json({ status: 'success', code: 200, data: { ...user.toJSON(), privateReferralCode }, token, message: 'User logged in successfully' });
         } catch (error) {
             next(error);
         }
     }
+
+
 
     static async editProfile(req, res, next) {
         try {

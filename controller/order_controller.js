@@ -38,39 +38,6 @@ function fetchShippingCost(origin, destination, weight, courier) {
     });
 }
 
-function fetchProvince() {
-    return new Promise((resolve, reject) => {
-        axios.get('https://api.rajaongkir.com/starter/province', {
-            headers: {
-                key: process.env.API_KEY
-            }
-        })
-            .then(response => {
-                resolve(response.data);
-            })
-            .catch(error => {
-                reject(error);
-            });
-    });
-}
-function fetchCity() {
-    return new Promise((resolve, reject) => {
-        axios.get('https://api.rajaongkir.com/starter/city', {
-            headers: {
-                key: process.env.API_KEY
-            }
-        })
-            .then(response => {
-                resolve(response.data);
-            })
-            .catch(error => {
-                reject(error);
-            });
-    });
-}
-
-
-
 // Set up multer storage
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
