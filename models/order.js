@@ -29,6 +29,8 @@ module.exports = (sequelize, DataTypes) => {
     shippingCost: DataTypes.INTEGER,
     shippingMethod: DataTypes.STRING,
     courier: DataTypes.STRING,
+    province: DataTypes.STRING,
+    city: DataTypes.STRING,
     status: DataTypes.STRING
   }, {
     sequelize,

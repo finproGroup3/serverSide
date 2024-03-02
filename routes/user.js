@@ -8,6 +8,8 @@ router.get("/", UserController.getAll);
 // GET user by ID
 router.get("/:id", UserController.getById);
 
+router.get('/count/all', UserController.countAll);
+
 // POST register new user
 router.post("/register", UserController.register);
 

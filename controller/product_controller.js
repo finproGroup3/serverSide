@@ -42,6 +42,36 @@ class ProductController {
         }
     }
 
+    static async getByCategoryAndName(req, res, next) {
+        try {
+            const { categoryId, name } = req.body;
+            const whereClause = {};
+
+            // Add categoryId filter if it's not undefined and not an empty string
+            if (categoryId !== undefined && categoryId !== "" && categoryId !== null) {
+                whereClause.categoryId = categoryId;
+            }
+
+            // Add name filter if it's not undefined and not an empty string
+            if (name !== undefined && name !== "" && name !== null) {
+                whereClause.name = { [Op.iLike]: `%${name}%` };
+            }
+
+            const products = await Product.findAll({
+                where: whereClause,
+                include: [
+                    { model: Category, attributes: ['id', 'name'] },
+                    { model: ProductGallery, attributes: ['id', 'imageUrl'] }
+                ],
+                attributes: { exclude: ['categoryId'] }
+            });
+            res.status(200).json({ status: 'success', code: 200, data: products, message: 'Products retrieved successfully' });
+        } catch (error) {
+            next(error);
+        }
+    }
+
+
     static async getById(req, res, next) {
         try {
             const productId = req.params.id;

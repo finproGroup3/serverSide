@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { User, ReferralCode, Cart } = require('../models');
+const { User, ReferralCode, Cart, Province, City } = require('../models');
 const { Sequelize } = require('sequelize');
 
 
@@ -51,6 +51,7 @@ const generateRandomCode = () => {
 };
 
 class UserController {
+
     static async getAll(req, res, next) {
         try {
             const users = await User.findAll();
@@ -59,6 +60,19 @@ class UserController {
             next(error);
         }
     }
+    static async countAll(req, res, next) {
+        try {
+            // Count the total number of users in the database
+            const totalUsers = await User.count();
+            console.log("=================================");
+            // Send the total number of users in the response
+            res.status(200).json({ status: 'success', code: 200, totalUsers, message: 'Total users counted successfully' });
+        } catch (error) {
+            // Pass any errors to the error handling middleware
+            next(error);
+        }
+    }
+
 
     static async getById(req, res, next) {
         try {
@@ -73,8 +87,14 @@ class UserController {
                 return res.status(404).json({ status: 'failed', code: 404, message: 'User not found' });
             }
 
-            // If user is found, send the user data
-            res.status(200).json({ status: 'success', code: 200, data: user, message: 'User retrieved successfully' });
+            // Fetch the province and city data associated with the user
+            const province = await Province.findByPk(user.provinceId);
+            const city = await City.findByPk(user.cityId);
+
+            // If province or city is not found, you may handle it accordingly
+
+            // If user is found, send the user data along with province and city data
+            res.status(200).json({ status: 'success', code: 200, data: { user, province, city }, message: 'User and associated province and city retrieved successfully' });
         } catch (error) {
             next(error); // Pass any errors to the error handling middleware
         }
@@ -208,8 +228,6 @@ class UserController {
         }
     }
 
-
-
     static async editProfile(req, res, next) {
         try {
             // Use multer middleware to handle form-data
@@ -232,14 +250,26 @@ class UserController {
                 // After handling file upload with multer
                 const profilePicture = req.file ? req.file.filename : user.profilePicture;
                 // Update the user's information in the database
-                await user.update({
-                    email,
-                    username,
-                    cityId,
-                    provinceId,
-                    address,
-                    profilePicture
-                });
+                const updatedData = {};
+                if (email !== null && email !== undefined) {
+                    updatedData.email = email; ``
+                }
+                if (username !== null && username !== undefined) {
+                    updatedData.username = username;
+                }
+                if (cityId !== null && cityId !== undefined) {
+                    updatedData.cityId = cityId;
+                }
+                if (provinceId !== null && provinceId !== undefined) {
+                    updatedData.provinceId = provinceId;
+                }
+                if (address !== null && address !== undefined) {
+                    updatedData.address = address;
+                }
+                if (profilePicture !== null && profilePicture !== undefined) {
+                    updatedData.profilePicture = profilePicture;
+                }
+                await user.update(updatedData);
                 // Return response indicating success
                 res.status(200).json({ status: 'success', code: 200, data: user, message: 'User profile updated successfully' });
             });
@@ -247,6 +277,7 @@ class UserController {
             next(error);
         }
     }
+
 
 }
 

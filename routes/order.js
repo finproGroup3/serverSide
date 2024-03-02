@@ -40,7 +40,9 @@ router.get('/top-buyers', authorize, (req, res, next) => {
     }
     return OrderController.getTopBuyers(req, res, next);
 });
+router.get('/count/nettPrice', OrderController.countNettPriceSucceed);
 
+router.get('/count/soldItem', OrderController.countProductsSold);
 // Route to get shipping cost
 router.post('/cost', OrderController.getShippingCost);
 

@@ -54,6 +54,12 @@ module.exports = {
       courier: {
         type: Sequelize.STRING,
       },
+      province: {
+        type: Sequelize.STRING,
+      },
+      city: {
+        type: Sequelize.STRING,
+      },
       status: {
         type: Sequelize.STRING,
       },

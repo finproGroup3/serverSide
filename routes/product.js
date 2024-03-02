@@ -3,6 +3,7 @@ const router = express.Router();
 const ProductController = require('../controller/product_controller.js');
 const authorize = require('../middleware/authorize');
 
+router.post("/filter-product", ProductController.getByCategoryAndName);
 // GET all products (admin and user can access)
 router.get('/', ProductController.getAll);
 

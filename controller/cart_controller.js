@@ -1,4 +1,4 @@
-const { Cart, Product, CartProduct, Promo, PromoProduct, Order, ProductGallery } = require('../models');
+const { Cart, Product, CartProduct, Promo, PromoProduct, Order, ProductGallery, User } = require('../models');
 const { Sequelize } = require('sequelize');
 
 // Create a new Sequelize instance
@@ -71,6 +71,42 @@ class CartController {
         }
     }
 
+    static async updateShippingCost(req, res, next) {
+        const t = await sequelize.transaction();
+        try {
+            const cartId = req.params.cartId;
+            const { shippingCost, shippingMethod, courier } = req.body;
+
+            // Find the cart by ID within the transaction
+            const cart = await Cart.findByPk(cartId, { transaction: t });
+            if (!cart) {
+                return res.status(404).json({ status: 'failed', code: 404, message: 'Cart not found' });
+            }
+
+            // Retrieve the current nettPrice and shippingCost of the cart
+            let currentNettPrice = cart.nettPrice;
+            let oldShippingCost = cart.shippingCost;
+
+            // Calculate the new nettPrice after updating shippingCost
+            let newNettPrice = currentNettPrice - oldShippingCost + shippingCost;
+
+            // Update the shippingCost of the cart within the transaction
+            await cart.update({ shippingCost, shippingMethod, courier }, { transaction: t });
+
+            // Update the nettPrice of the cart with the new value
+            await cart.update({ nettPrice: newNettPrice }, { transaction: t });
+
+            // Commit the transaction if the update is successful
+            await t.commit();
+
+            res.status(200).json({ status: 'success', code: 200, message: 'Shipping cost updated successfully' });
+        } catch (error) {
+            // Rollback the transaction in case of error
+            await t.rollback();
+            next(error);
+        }
+    }
+
 
 
     static async addAndnUpdateProductToCart(req, res, next) {
@@ -78,21 +114,24 @@ class CartController {
         try {
             const { productId, quantity } = req.body;
             const cartId = req.params.cartId;
+
             // Find the cart by ID
             const cart = await Cart.findByPk(cartId, { transaction: t });
             if (!cart) {
                 return res.status(404).json({ status: 'failed', code: 404, message: 'Cart not found' });
             }
+
             // Find the product by ID to get its price
             const product = await Product.findByPk(productId, { transaction: t });
             if (!product) {
                 return res.status(404).json({ status: 'failed', code: 404, message: 'Product not found' });
             }
+
             // Calculate the total price for the quantity
             const price = product.price * quantity;
 
             // Check if the product already exists in the cart
-            const existingCartItem = await CartProduct.findOne({
+            let existingCartItem = await CartProduct.findOne({
                 where: { cartId, productId },
                 transaction: t
             });
@@ -102,10 +141,12 @@ class CartController {
                 await existingCartItem.update({ quantity, price }, { transaction: t });
             } else {
                 // If the product does not exist in the cart, add it
-                await CartProduct.create({ cartId, productId, quantity, price }, { transaction: t });
+                existingCartItem = await CartProduct.create({ cartId, productId, quantity, price }, { transaction: t });
             }
+
             // Sum all the prices in CartProduct with the same cartId
             const totalPriceInCart = await CartProduct.sum('price', { where: { cartId }, transaction: t });
+
             // Update the totalPrice and nettPrice of the cart
             const totalPrice = totalPriceInCart;
             const nettPrice = totalPriceInCart - cart.shippingCost - cart.totalDiscount;
@@ -113,11 +154,17 @@ class CartController {
 
             // Get the userId from the cart
             const userId = cart.userId;
-            const order = await Order.findOne({ where: { userId }, transaction: t });
 
-            // If user is first order
+            // Check if the user has redeemed a referral code
+            const user = await User.findByPk(userId, { transaction: t });
+            let totalAffiliate = 0;
+            if (user && user.reedemedReferralCodeId !== null) {
+                totalAffiliate = nettPrice / 2;
+            }
+
+            // If user is first order, update totalAffiliate and nettPrice
+            const order = await Order.findOne({ where: { userId }, transaction: t });
             if (!order) {
-                const totalAffiliate = nettPrice / 2;
                 const updatedNettPrice = nettPrice - totalAffiliate;
                 await cart.update({ totalAffiliate, nettPrice: updatedNettPrice }, { transaction: t });
             }
@@ -134,12 +181,14 @@ class CartController {
     }
 
 
+
     static async addPromoToCart(req, res, next) {
         const t = await sequelize.transaction();
         try {
             const { promoId } = req.body;
             const cartId = req.params.cartId;
             // Find the promo by ID
+            console.log("ini promo id : " + promoId);
             const promo = await Promo.findByPk(promoId, { transaction: t });
             if (!promo) {
                 return res.status(404).json({ status: 'failed', code: 404, message: 'Promo not found' });
@@ -158,14 +207,16 @@ class CartController {
                     // Calculate the total discount based on the promo percentage
                     const nettPrice = cart.nettPrice;
                     const percentage = promo.percentage;
-                    const totalDiscount = nettPrice * (percentage / 100);
-                    const updatedNettPrice = nettPrice - totalDiscount;
+                    const totalDiscount = Math.floor(nettPrice * (percentage / 100));
+                    const updatedNettPrice = Math.floor(nettPrice - totalDiscount);
 
                     // Update the promo quota if the promo is successfully applied
                     await promo.update({ quota: promo.quota - 1 }, { transaction: t });
-                    // Update the cart with promo details
+
+                    // Update the cart with promo details after converting to integers
                     await cart.update({ promoId, totalDiscount, nettPrice: updatedNettPrice }, { transaction: t });
                 }
+
             } else {
                 const cartProducts = await CartProduct.findAll({ where: { cartId }, transaction: t });
                 const productIds = cartProducts.map(cartProduct => cartProduct.productId);
@@ -178,7 +229,7 @@ class CartController {
                 const allProductsEligible = productIds.every(productId => promoProductIds.includes(productId));
 
                 if (!allProductsEligible) {
-                    return res.status(400).json({ status: 'failed', code: 400, message: 'Cart products are not eligible for the promo' });
+                    return res.status(400).json({ status: 'failed', code: 400, message: 'Products are not eligible for the promo' });
                 }
 
                 // If all products in the cart are eligible, update the cart with the promoId
@@ -208,7 +259,6 @@ class CartController {
         } catch (error) {
             // Rollback the transaction in case of error
             await t.rollback();
-            next(error);
             res.status(500).json({ status: 'error', code: 500, message: 'Internal server error' });
         }
     }

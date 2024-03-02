@@ -10,6 +10,7 @@ const categoryRouter = require("./category")
 const storeRouter = require("./store")
 const getImageRouter = require("./getImage")
 
+
 router.use("/users", userRouter);
 router.use("/admin", adminRouter);
 router.use("/product", productRouter);

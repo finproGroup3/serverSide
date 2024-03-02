@@ -69,7 +69,6 @@ const upload = multer({
 class OrderController {
     static async addOrder(req, res, next) {
         const t = await sequelize.transaction();
-
         try {
             const { userId, cartId } = req.body;
 
@@ -101,6 +100,13 @@ class OrderController {
                 }));
             }
 
+            // Update the cart columns within the transaction
+            await Cart.update(
+                { promoId: null, shippingCost: 0, totalDiscount: 0, totalAffiliate: 0, totalPrice: 0, nettPrice: 0, shippingMethod: null, courier: 0 },
+                { where: { id: cartId }, transaction: t }
+            );
+            // Delete all CartProduct instances with the same cartId
+            await CartProduct.destroy({ where: { cartId }, transaction: t });
             // Commit the transaction if everything is successful
             await t.commit();
 
@@ -111,6 +117,7 @@ class OrderController {
             next(error);
         }
     }
+
 
     static async addPaymentBill(req, res, next) {
         const t = await sequelize.transaction();
@@ -230,9 +237,18 @@ class OrderController {
             next(error);
         }
     }
+    static async countProductsSold(req, res, next) {
+        try {
+            // Sum the quantities of all products sold
+            const totalProductsSold = await OrderProduct.sum('quantity');
 
-
-
+            // Send the total products sold in the response
+            res.status(200).json({ status: 'success', code: 200, totalProductsSold, message: 'Total products sold counted successfully' });
+        } catch (error) {
+            // Pass any errors to the error handling middleware
+            next(error);
+        }
+    }
     static async getAllOrders(req, res, next) {
         try {
             const orders = await Order.findAll({
@@ -243,6 +259,22 @@ class OrderController {
             });
             res.status(200).json({ status: 'success', code: 200, data: orders, message: 'Orders retrieved successfully' });
         } catch (error) {
+            next(error);
+        }
+    }
+    static async countNettPriceSucceed(req, res, next) {
+        try {
+            // Count the total nettPrice where status is "succeed"
+            const totalNettPriceSucceed = await Order.sum('nettPrice', {
+                where: {
+                    status: 'succeed'
+                }
+            });
+
+            // Send the total nettPrice where status is "succeed" in the response
+            res.status(200).json({ status: 'success', code: 200, totalNettPriceSucceed, message: 'Total nettPrice where status is "succeed" counted successfully' });
+        } catch (error) {
+            // Pass any errors to the error handling middleware
             next(error);
         }
     }
